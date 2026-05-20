@@ -1,0 +1,101 @@
+veri seti: https://www.kaggle.com/datasets/yasserh/housing-prices-dataset
+
+house_price_prediction/
+│
+├── data/
+│   │
+│   ├── raw/
+│   │   └── housing.csv
+│   │
+│   └── processed/
+│       └── cleaned_housing.csv
+│
+├── models/
+│   │
+│   ├── mlp_model.py
+│   └── saved_model.pth
+│
+├── src/
+│   │
+│   ├── preprocessing.py
+│   ├── dataset.py
+│   ├── train.py
+│   ├── evaluate.py
+│   ├── predict.py
+│   └── utils.py
+│
+├── notebooks/
+│   └── analysis.ipynb
+│
+├── results/
+│   │
+│   ├── loss_graph.png
+│   ├── prediction_graph.png
+│   └── metrics.txt
+│
+├── main.py
+├── requirements.txt
+└── README.md
+
+
+python -m venv venv
+venv\Scripts\activate
+pip install pandas numpy matplotlib scikit-learn jupyter
+pip install torch torchvision torchaudio
+
+pip freeze > requirements.txt
+
+
+[5 rows x 13 columns]
+
+VERİ SETİ BOYUTU
+(545, 13)
+
+SÜTUNLAR
+Index(['price', 'area', 'bedrooms', 'bathrooms', 'stories', 'mainroad',
+       'guestroom', 'basement', 'hotwaterheating', 'airconditioning',
+       'parking', 'prefarea', 'furnishingstatus'],
+      dtype='str')
+
+VERİ TİPLERİ
+price               int64
+area                int64
+bedrooms            int64
+bathrooms           int64
+stories             int64
+mainroad              str
+guestroom             str
+basement              str
+hotwaterheating       str
+airconditioning       str
+parking             int64
+prefarea              str
+furnishingstatus      str
+dtype: object
+
+EKSİK VERİ KONTROLÜ
+price               0
+area                0
+bedrooms            0
+bathrooms           0
+stories             0
+mainroad            0
+guestroom           0
+basement            0
+hotwaterheating     0
+airconditioning     0
+parking             0
+prefarea            0
+furnishingstatus    0
+dtype: int64
+
+İSTATİSTİKLER
+              price          area    bedrooms   bathrooms     stories     parking
+count  5.450000e+02    545.000000  545.000000  545.000000  545.000000  545.000000
+mean   4.766729e+06   5150.541284    2.965138    1.286239    1.805505    0.693578
+std    1.870440e+06   2170.141023    0.738064    0.502470    0.867492    0.861586
+min    1.750000e+06   1650.000000    1.000000    1.000000    1.000000    0.000000
+25%    3.430000e+06   3600.000000    2.000000    1.000000    1.000000    0.000000
+50%    4.340000e+06   4600.000000    3.000000    1.000000    2.000000    0.000000
+75%    5.740000e+06   6360.000000    3.000000    2.000000    2.000000    1.000000
+max    1.330000e+07  16200.000000    6.000000    4.000000    4.000000    3.000000
