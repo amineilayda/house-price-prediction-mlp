@@ -2,8 +2,7 @@ numpy
 pandas
 matplotlib
 scikit-learn
-seaborn
+joblib
 torch
 torchvision
 torchaudio
-jupyter

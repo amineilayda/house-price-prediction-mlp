@@ -1,4 +1,19 @@
 venv/
 __pycache__/
 *.pyc
+*.pyo
 .ipynb_checkpoints/
+
+# Eğitilmiş modeller (büyük dosyalar)
+models/*.pth
+models/*.pkl
+
+# İşlenmiş veri (ham veriden üretiliyor, repoya girmesine gerek yok)
+data/processed/
+
+# Sonuçlar (çalıştırınca yeniden üretilir)
+results/
+
+# IDE
+.vscode/
+.idea/

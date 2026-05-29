@@ -1,0 +1,252 @@
+╔══════════════════════════════════════════════════════╗
+║       KONUT FİYAT TAHMİN SİSTEMİ — MLP              ║
+║       Yapay Sinir Ağları Dersi — Dönem Projesi        ║
+╚══════════════════════════════════════════════════════╝
+    
+
+── ADIM 1: VERİ ÖN İŞLEME ──────────────────────────
+
+========== VERİ ÖN İŞLEME ==========
+
+[✓] Veri yüklendi: 21,613 satır, 21 sütun
+[✓] 2 adet bedrooms outlier'ı 10'a indirildi
+[✓] Temizleme tamamlandı: 20 sütun kaldı
+[✓] Feature engineering: ['house_age', 'renovated', 'years_since_reno', 'sqft_per_bedroom', 'sqft_living_ratio', 'basement_ratio', 'luxury_score']
+[✓] Log transform uygulandı: fiyat aralığı 11.23 — 15.86
+[✓] Özellik sayısı: 24  |  Hedef: log(price)
+[✓] Train: 15,129  |  Val: 3,242  |  Test: 3,242
+[✓] X Scaler kaydedildi: models\scaler.pkl
+[✓] y Scaler kaydedildi: models\y_scaler.pkl
+[✓] İşlenmiş dosyalar kaydedildi: data\processed/
+
+========== ÖZET ==========
+  Özellikler (24): ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'lat', 'long', 'sqft_living15', 'sqft_lot15', 'sale_year', 'sale_month', 'house_age', 'renovated', 'years_since_reno', 'sqft_per_bedroom', 'sqft_living_ratio', 'basement_ratio', 'luxury_score']
+  Train: (15129, 24)  |  Val: (3242, 24)  |  Test: (3242, 24)
+  Ham fiyat aralığı: $75,000 — $7,700,003
+==========================
+
+
+── ADIM 2: MODEL EĞİTİMİ ────────────────────────────
+
+=======================================================
+  EĞİTİM BAŞLIYOR — MLP
+=======================================================
+  Cihaz        : cpu
+  Optimizer    : ADAM
+  Learning Rate: 0.001
+  Batch Size   : 64
+  Max Epoch    : 150
+  Early Stop   : 20 epoch
+
+[✓] DataLoader hazır  →  batch_size=64
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+
+=======================================================
+         KONUT FİYAT TAHMİN MODELİ (MLP)
+=======================================================
+Sequential(
+  (0): Linear(in_features=24, out_features=256, bias=True)
+  (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (2): ReLU()
+  (3): Dropout(p=0.3, inplace=False)
+  (4): Linear(in_features=256, out_features=128, bias=True)
+  (5): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (6): ReLU()
+  (7): Dropout(p=0.2, inplace=False)
+  (8): Linear(in_features=128, out_features=64, bias=True)
+  (9): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (10): ReLU()
+  (11): Dropout(p=0.1, inplace=False)
+  (12): Linear(in_features=64, out_features=32, bias=True)
+  (13): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (14): ReLU()
+  (15): Linear(in_features=32, out_features=1, bias=True)
+)
+=======================================================
+  Toplam Eğitilebilir Parametre: 50,625
+=======================================================
+
+  Epoch    1/150 | Train: 3.9561e-01 | Val: 2.2010e-01 | LR: 1.00e-03
+  Epoch   10/150 | Train: 1.8794e-01 | Val: 1.4594e-01 | LR: 1.00e-03
+  Epoch   20/150 | Train: 1.6241e-01 | Val: 1.2588e-01 | LR: 1.00e-03
+  Epoch   30/150 | Train: 1.4916e-01 | Val: 1.2171e-01 | LR: 1.00e-03
+  Epoch   40/150 | Train: 1.4237e-01 | Val: 1.2337e-01 | LR: 1.00e-03
+  Epoch   50/150 | Train: 1.4079e-01 | Val: 1.1661e-01 | LR: 1.00e-03
+  Epoch   60/150 | Train: 1.3485e-01 | Val: 1.2258e-01 | LR: 1.00e-03
+  Epoch   70/150 | Train: 1.3444e-01 | Val: 1.1361e-01 | LR: 1.00e-03
+  Epoch   80/150 | Train: 1.2941e-01 | Val: 1.1974e-01 | LR: 1.00e-03
+  Epoch   90/150 | Train: 1.3165e-01 | Val: 1.1587e-01 | LR: 1.00e-03
+  Epoch  100/150 | Train: 1.2661e-01 | Val: 1.1849e-01 | LR: 1.00e-03
+
+  ⏹  Early stopping: 101. epochta duruldu.
+
+  Eğitim süresi : 128.4s
+  En iyi val MSE: 1.1183e-01
+  Model kaydedildi: models\mlp.pth
+[✓] Loss grafiği kaydedildi: results\loss_graph_mlp.png
+
+── ADIM 3: DEĞERLENDİRME ────────────────────────────
+
+==================================================
+  DEĞERLENDİRME BAŞLIYOR — MLP
+==================================================
+[✓] Model yüklendi: models\mlp.pth
+[✓] DataLoader hazır  →  batch_size=32
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+
+==================================================
+  TEST SONUÇLARI — MLP
+==================================================
+  MSE  :  18,366,113,792.00
+  RMSE :         135,521.64
+  MAE  :          72,045.20
+  R²   :             0.8826  (1.0 mükemmel)
+  MAPE :             12.65%
+==================================================
+  Yorum: İyi — kabul edilebilir
+
+[✓] Değerlendirme grafiği kaydedildi: results\evaluation_mlp.png
+[✓] Metrikler kaydedildi: results\metrics.txt
+
+✓ Pipeline tamamlandı. Sonuçlar: results/ klasörü
+PS C:\Users\ilayd\Desktop\house_price_prediction> python src/experiments.py
+
+╔══════════════════════════════════════════════════════════╗
+║  KARŞILAŞTIRMALI DENEYLER — YSA Ders Projesi             ║
+╚══════════════════════════════════════════════════════════╝
+  Cihaz: cpu  |  Sonuçlar: results/experiments/
+
+[✓] DataLoader hazır  →  batch_size=64
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+  Giriş boyutu: 24
+
+
+════════════════════════════════════════════════════════════
+  DENEY 1: AKTİVASYON FONKSİYONU KARŞILAŞTIRMASI
+  Ders Konusu: Hafta 2-3 — YSA Model Yapısı
+════════════════════════════════════════════════════════════
+  → RELU test ediliyor... Val MSE: 0.1166  R²: 0.8840  (60 epoch)
+  → SIGMOID test ediliyor... Val MSE: 0.1479  R²: 0.8528  (60 epoch)
+  → TANH test ediliyor... Val MSE: 0.1204  R²: 0.8802  (60 epoch)
+
+  Konfigürasyon                          Val MSE       R²   Epoch
+  ---------------------------------------------------------------
+  ReLU                                    0.1166   0.8840 ★  (60 epoch)
+  Sigmoid                                 0.1479   0.8528  (60 epoch)
+  Tanh                                    0.1204   0.8802  (60 epoch)
+  [✓] Grafik kaydedildi: results/experiments\exp1_activation.png
+
+════════════════════════════════════════════════════════════
+  DENEY 2: MİMARİ KARŞILAŞTIRMASI (KATMAN SAYISI)
+  Ders Konusu: Hafta 3 — YSA'da Katman Yapısı
+════════════════════════════════════════════════════════════
+  → 1 Gizli Katman (Baseline) (1,793 param)... R²: 0.8773  (60 epoch)
+  → 2 Gizli Katman (11,905 param)... R²: 0.8838  (57 epoch)
+  → 3 Gizli Katman (14,017 param)... R²: 0.8837  (60 epoch)
+  → 4 Gizli Katman (50,625 param)... R²: 0.8868  (60 epoch)
+
+  Konfigürasyon                          Val MSE       R²   Epoch
+  ---------------------------------------------------------------
+  1 Gizli Katman (Baseline)               0.1233   0.8773  (60 epoch)
+  2 Gizli Katman                          0.1169   0.8838  (57 epoch)
+  3 Gizli Katman                          0.1169   0.8837  (60 epoch)
+  4 Gizli Katman                          0.1138   0.8868 ★  (60 epoch)
+  [✓] Grafik kaydedildi: results/experiments\exp2_architecture.png
+
+════════════════════════════════════════════════════════════
+  DENEY 3: DROPOUT / OVERFİTTİNG ANALİZİ
+  Ders Konusu: Hafta 4 — Problemler ve Çözümleri
+════════════════════════════════════════════════════════════
+  → Dropout Yok  (p=0.0)... R²: 0.8776  Gap: +0.0181
+  → Düşük        (p=0.1)... R²: 0.8862  Gap: -0.0124
+  → Orta         (p=0.3)... R²: 0.8852  Gap: -0.0279
+  → Yüksek       (p=0.5)... R²: 0.8634  Gap: -0.0297
+
+  Konfigürasyon                     Val MSE       R²  Train-Val Gap
+  -----------------------------------------------------------------
+  Dropout Yok  (p=0.0)               0.1230   0.8776      +0.0181
+  Düşük        (p=0.1)               0.1144   0.8862      -0.0124
+  Orta         (p=0.3)               0.1154   0.8852      -0.0279
+  Yüksek       (p=0.5)               0.1374   0.8634      -0.0297
+  [✓] Grafik kaydedildi: results/experiments\exp3_dropout.png
+
+════════════════════════════════════════════════════════════
+  DENEY 4: ÖĞRENME HIZI (LEARNING RATE) ANALİZİ
+  Ders Konusu: Hafta 5 — GY Eğitim Yöntemi
+════════════════════════════════════════════════════════════
+  → LR = 0.01  (Yüksek)... R²: 0.8793  (60 epoch)
+  → LR = 0.001 (Standart)... R²: 0.8835  (60 epoch)
+  → LR = 0.0001 (Düşük)... R²: 0.8372  (60 epoch)
+  → LR = 0.00001 (Çok Düşük)... R²: 0.7631  (60 epoch)
+
+  Konfigürasyon                          Val MSE       R²   Epoch
+  ---------------------------------------------------------------
+  LR = 0.01  (Yüksek)                     0.1213   0.8793  (60 epoch)
+  LR = 0.001 (Standart)                   0.1171   0.8835 ★  (60 epoch)
+  LR = 0.0001 (Düşük)                     0.1637   0.8372  (60 epoch)
+  LR = 0.00001 (Çok Düşük)                0.2382   0.7631  (60 epoch)
+  [✓] Grafik kaydedildi: results/experiments\exp4_learning_rate.png
+
+════════════════════════════════════════════════════════════
+  DENEY 5: OPTİMİZATÖR KARŞILAŞTIRMASI
+  Ders Konusu: Hafta 6 — Momentumlu BP Yöntemi
+════════════════════════════════════════════════════════════
+  → Adam (lr=1e-3)... R²: 0.8861  (60 epoch, 73.2s)
+  → SGD+Momentum (lr=1e-2)... R²: 0.8698  (55 epoch, 48.1s)
+  → SGD+Momentum (lr=1e-3)... R²: 0.8316  (60 epoch, 54.3s)
+  → SGD+Momentum m=0.99... R²: 0.8824  (60 epoch, 52.1s)
+
+  Konfigürasyon                          Val MSE       R²   Epoch
+  ---------------------------------------------------------------
+  Adam (lr=1e-3)                          0.1145   0.8861 ★  (60 epoch)
+  SGD+Momentum (lr=1e-2)                  0.1309   0.8698  (55 epoch)
+  SGD+Momentum (lr=1e-3)                  0.1693   0.8316  (60 epoch)
+  SGD+Momentum m=0.99                     0.1183   0.8824  (60 epoch)
+  [✓] Grafik kaydedildi: results/experiments\exp5_optimizer.png
+
+╔══════════════════════════════════════════════════════════╗
+║  KARŞILAŞTIRMALI DENEYLER — YSA Ders Projesi             ║
+╚══════════════════════════════════════════════════════════╝
+  Cihaz: cpu  |  Sonuçlar: results/experiments/
+
+[✓] DataLoader hazır  →  batch_size=64
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+  Giriş boyutu: 24
+
+
+════════════════════════════════════════════════════════════
+  DENEY 6: BATCH SIZE — ARDIŞIL vs YIĞIN MOD
+  Ders Konusu: Hafta 7 — Eğitme Yönteminde Farklı Modlar
+════════════════════════════════════════════════════════════
+  → Ardışıl Mod  (bs=1)...[✓] DataLoader hazır  →  batch_size=1
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+ R²: 0.8807  Süre: 1331.0s (BN yok)
+  → Mini-batch   (bs=32)...[✓] DataLoader hazır  →  batch_size=32
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+ R²: 0.8793  Süre: 72.9s
+  → Mini-batch   (bs=64)...[✓] DataLoader hazır  →  batch_size=64
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+ R²: 0.8777  Süre: 39.8s
+  → Mini-batch   (bs=256)...[✓] DataLoader hazır  →  batch_size=256
+    Train: 15129 örnek  |  Val: 3242  |  Test: 3242
+    Giriş boyutu: 24
+ R²: 0.8664  Süre: 18.9s
+
+  Mod                             Val MSE       R²   Epoch   Süre(s)
+  -----------------------------------------------------------------
+  Ardışıl Mod  (bs=1)              0.1200   0.8807      39    1331.0
+  Mini-batch   (bs=32)             0.1214   0.8793      40      72.9
+  Mini-batch   (bs=64)             0.1230   0.8777      40      39.8
+  Mini-batch   (bs=256)            0.1343   0.8664      40      18.9
+  [✓] Grafik kaydedildi: results/experiments\exp6_batch_size.png
+
+
+════════════════════════════════════════════════════════════
+  TÜM DENEYLER TAMAMLANDI

@@ -1,101 +1,206 @@
-veri seti: https://www.kaggle.com/datasets/yasserh/housing-prices-dataset
+── PROJE AMACI ──────────────────────────────────────────────────
+
+King County (Seattle, ABD) bölgesindeki konutlara ait fiziksel
+ve konum özelliklerini kullanarak ev satış fiyatlarını tahmin
+eden bir Çok Katmanlı Algılayıcı (MLP) tabanlı yapay sinir ağı
+sistemi geliştirmek.
+
+Model; metrekare, oda sayısı, kat sayısı, bina yaşı, konum
+(enlem/boylam), manzara, yenileme durumu gibi 24 özelliği
+analiz ederek tahmini satış fiyatını USD cinsinden hesaplar.
+
+
+── VERİ SETİ ────────────────────────────────────────────────────
+
+Kaynak   : Kaggle — King County House Sales Dataset
+URL      : https://www.kaggle.com/datasets/harlfoxem/housesalesprediction
+Boyut    : 21,613 satır × 21 sütun
+Fiyat    : $75,000 — $7,700,000 arası (ortalama ~$540,000)
+Dönem    : Mayıs 2014 — Mayıs 2015 satışları
+
+Ham Sütunlar:
+  id, date, price, bedrooms, bathrooms, sqft_living, sqft_lot,
+  floors, waterfront, view, condition, grade, sqft_above,
+  sqft_basement, yr_built, yr_renovated, zipcode, lat, long,
+  sqft_living15, sqft_lot15
+
+
+── VERİ ÖN İŞLEME (src/preprocessing.py) ───────────────────────
+
+1. Temizleme
+   - id ve zipcode kaldırıldı (lat/long konum bilgisini taşıyor)
+   - date → sale_year, sale_month olarak ayrıştırıldı
+   - bedrooms > 10 olan 2 outlier 10'a indirildi (veri giriş hatası)
+
+2. Feature Engineering (4 yeni özellik türetildi)
+   - house_age          = sale_year − yr_built
+   - renovated          = 1 (yr_renovated > 0), 0 (renovasyon yok)
+   - years_since_reno   = sale_year − yr_renovated (0 ise hiç yenilenmemiş)
+   - sqft_per_bedroom   = sqft_living / bedrooms
+   - sqft_living_ratio  = sqft_living / sqft_living15 (komşularla kıyaslama)
+   - basement_ratio     = sqft_basement / sqft_living
+   - luxury_score       = grade×0.667 + view×0.397 + waterfront×0.266
+                          (ağırlıklar Pearson korelasyonuna dayanır)
+   → Toplam: 17 ham + 7 türetilmiş = 24 özellik
+
+3. Log Transform (Hedef Değişken)
+   - Fiyat dağılımı sağa çarpık (skew = 4.02)
+   - log1p(price) uygulandı → skew ≈ 0.1
+   - Kaynak: Malpezzi (2003), hedonic pricing modelleri
+
+4. Ölçeklendirme
+   - X: StandardScaler — sadece train'e fit, val/test'e transform
+   - y: StandardScaler(log(price)) — data leakage önleme
+   - Kaydedilen: models/scaler.pkl, models/y_scaler.pkl
+
+5. Veri Bölme — %70 / %15 / %15
+   - Train : 15,129 örnek
+   - Val   :  3,242 örnek
+   - Test  :  3,242 örnek
+
+
+── MODEL MİMARİSİ (models/mlp_model.py) ────────────────────────
+
+Model Türü : Çok Katmanlı Algılayıcı (MLP / Feedforward ANN)
+Framework  : PyTorch
+
+Mimari:
+  Giriş(24) → [FC(256) → BN → ReLU → Dropout(0.3)]
+            → [FC(128) → BN → ReLU → Dropout(0.2)]
+            → [FC(64)  → BN → ReLU → Dropout(0.1)]
+            → [FC(32)  → BN → ReLU]
+            → Çıkış(1)  [Doğrusal — Regresyon]
+
+Parametre Sayısı: 50,625 (eğitilebilir)
+
+Tasarım Kararları ve Akademik Kaynaklar:
+  - ReLU Aktivasyonu  : Glorot et al. (2011), AISTATS
+  - Batch Normalization: Ioffe & Szegedy (2015), ICML
+  - Dropout           : Srivastava et al. (2014), JMLR
+  - He Initialization : He et al. (2015), ICCV
+  - Mimari gerekçe    : Hornik et al. (1989), Neural Networks
+
+
+── EĞİTİM (src/train.py) ───────────────────────────────────────
+
+Optimizer     : Adam (Kingma & Ba, 2015) — lr=0.001, wd=1e-4
+Kayıp Fonk.   : MSE (Mean Squared Error)
+Batch Size    : 64 (Mini-batch modu — Hafta 7)
+Max Epoch     : 150
+Early Stopping: Patience=20 (Prechelt, 1998)
+LR Scheduler  : ReduceLROnPlateau — factor=0.7, patience=20
+Eğitim Cihazı : CPU (CUDA varsa otomatik GPU)
+
+Eğitim Döngüsü (her batch):
+  1. İleri geçiş (forward pass)
+  2. MSE kaybı hesapla
+  3. Gradyanları sıfırla (zero_grad)
+  4. Geri yayınım (loss.backward) — Rumelhart et al. (1986)
+  5. Ağırlıkları güncelle (optimizer.step)
+
+
+── DEĞERLENDİRME METRİKLERİ (src/evaluate.py) ─────────────────
+
+Son Test Sonuçları:
+  R²   = 0.8752  → Fiyat varyansının %87.5'i açıklanıyor
+  RMSE = $139,729
+  MAE  = $71,912
+  MAPE = 12.61%
+
+Inverse Transform Pipeline:
+  Model çıktısı (normalize log) → y_scaler.inverse_transform
+  → log uzayı → np.expm1() → gerçek USD fiyatı
+
+
+── KARŞILAŞTIRMALI DENEYLER (src/experiments.py) ───────────────
+
+6 deney ders konularıyla örtüştürülmüştür:
+
+  Deney 1 — Aktivasyon Fonksiyonu (ReLU / Sigmoid / Tanh)
+            Ders Konusu: Hafta 2-3 — YSA Model Yapısı
+
+  Deney 2 — Mimari Karşılaştırması (1-2-3-4 gizli katman)
+            Ders Konusu: Hafta 3 — Katman Yapısı
+
+  Deney 3 — Dropout / Overfitting Analizi (p=0.0-0.1-0.3-0.5)
+            Ders Konusu: Hafta 4 — Problemler ve Çözümleri
+
+  Deney 4 — Learning Rate Analizi (0.01-0.001-0.0001-0.00001)
+            Ders Konusu: Hafta 5 — GY Eğitim Yöntemi
+
+  Deney 5 — Adam vs SGD+Momentum
+            Ders Konusu: Hafta 6 — Momentumlu BP Yöntemi
+
+  Deney 6 — Batch Size (1 / 32 / 64 / 256)
+            Ders Konusu: Hafta 7 — Ardışıl Mod vs Yığın Mod
+
+Grafik çıktıları: results/experiments/
+
+
+── DOSYA YAPISI ─────────────────────────────────────────────────
 
 house_price_prediction/
-│
 ├── data/
-│   │
 │   ├── raw/
-│   │   └── housing.csv
-│   │
+│   │   └── kc_house_data.csv          ← ham veri seti
 │   └── processed/
-│       └── cleaned_housing.csv
-│
+│       ├── train.csv                  ← 15,129 örnek
+│       ├── val.csv                    ←  3,242 örnek
+│       └── test.csv                   ←  3,242 örnek
 ├── models/
-│   │
-│   ├── mlp_model.py
-│   └── saved_model.pth
-│
+│   ├── mlp_model.py                   ← MLP mimarisi
+│   ├── mlp.pth                        ← eğitilmiş model
+│   ├── scaler.pkl                     ← X normalizer
+│   └── y_scaler.pkl                   ← y normalizer
 ├── src/
-│   │
-│   ├── preprocessing.py
-│   ├── dataset.py
-│   ├── train.py
-│   ├── evaluate.py
-│   ├── predict.py
-│   └── utils.py
-│
-├── notebooks/
-│   └── analysis.ipynb
-│
+│   ├── preprocessing.py               ← veri ön işleme pipeline
+│   ├── dataset.py                     ← PyTorch Dataset/DataLoader
+│   ├── train.py                       ← eğitim döngüsü
+│   ├── evaluate.py                    ← test metrikleri + grafikler
+│   └── experiments.py                 ← 6 karşılaştırmalı deney
 ├── results/
-│   │
-│   ├── loss_graph.png
-│   ├── prediction_graph.png
-│   └── metrics.txt
-│
-├── main.py
-├── requirements.txt
-└── README.md
+│   ├── loss_graph_mlp.png             ← eğitim/val kayıp eğrisi
+│   ├── evaluation_mlp.png             ← 4 panelli değerlendirme
+│   ├── metrics.txt                    ← sayısal sonuçlar
+│   └── experiments/                   ← deney grafikleri
+├── main.py                            ← merkezi çalıştırma sistemi
+└── requirements.txt
 
 
+── ÇALIŞTIRMA KOMUTLARI ─────────────────────────────────────────
+
+# Kurulum
 python -m venv venv
 venv\Scripts\activate
-pip install pandas numpy matplotlib scikit-learn jupyter
 pip install torch torchvision torchaudio
+pip install pandas numpy matplotlib scikit-learn joblib
 
-pip freeze > requirements.txt
+# Tam pipeline (önişleme → eğitim → değerlendirme)
+python main.py --mode all
+
+# Ayrı adımlar
+python main.py --mode preprocess
+python main.py --mode train
+python main.py --mode evaluate
+
+# Karşılaştırmalı deneyler (tümü ~15 dk)
+python main.py --mode experiments
+python src/experiments.py --exp 5      # sadece Deney 5
 
 
-[5 rows x 13 columns]
+── TEMEL AKADEMİK KAYNAKLAR ────────────────────────────────────
 
-VERİ SETİ BOYUTU
-(545, 13)
+Rumelhart et al. (1986)    — Backpropagation, Nature
+Hornik et al. (1989)       — Universal Approximation, Neural Networks
+Polyak (1964)              — Momentum, USSR Comp. Math.
+Glorot et al. (2011)       — ReLU, AISTATS
+Ioffe & Szegedy (2015)     — Batch Normalization, ICML
+Srivastava et al. (2014)   — Dropout, JMLR
+He et al. (2015)           — Kaiming Init, ICCV
+Kingma & Ba (2015)         — Adam Optimizer, ICLR
+Prechelt (1998)            — Early Stopping, Springer
+Bengio (2012)              — LR Önerileri, arXiv
+Malpezzi (2003)            — Hedonic Pricing & Log Transform
+Chai & Draxler (2014)      — RMSE vs MAE, Geosci. Model Dev.
 
-SÜTUNLAR
-Index(['price', 'area', 'bedrooms', 'bathrooms', 'stories', 'mainroad',
-       'guestroom', 'basement', 'hotwaterheating', 'airconditioning',
-       'parking', 'prefarea', 'furnishingstatus'],
-      dtype='str')
-
-VERİ TİPLERİ
-price               int64
-area                int64
-bedrooms            int64
-bathrooms           int64
-stories             int64
-mainroad              str
-guestroom             str
-basement              str
-hotwaterheating       str
-airconditioning       str
-parking             int64
-prefarea              str
-furnishingstatus      str
-dtype: object
-
-EKSİK VERİ KONTROLÜ
-price               0
-area                0
-bedrooms            0
-bathrooms           0
-stories             0
-mainroad            0
-guestroom           0
-basement            0
-hotwaterheating     0
-airconditioning     0
-parking             0
-prefarea            0
-furnishingstatus    0
-dtype: int64
-
-İSTATİSTİKLER
-              price          area    bedrooms   bathrooms     stories     parking
-count  5.450000e+02    545.000000  545.000000  545.000000  545.000000  545.000000
-mean   4.766729e+06   5150.541284    2.965138    1.286239    1.805505    0.693578
-std    1.870440e+06   2170.141023    0.738064    0.502470    0.867492    0.861586
-min    1.750000e+06   1650.000000    1.000000    1.000000    1.000000    0.000000
-25%    3.430000e+06   3600.000000    2.000000    1.000000    1.000000    0.000000
-50%    4.340000e+06   4600.000000    3.000000    1.000000    2.000000    0.000000
-75%    5.740000e+06   6360.000000    3.000000    2.000000    2.000000    1.000000
-max    1.330000e+07  16200.000000    6.000000    4.000000    4.000000    3.000000
+════════════════════════════════════════════════════════════════
